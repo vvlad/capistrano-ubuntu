@@ -27,7 +27,7 @@ namespace :ubuntu do
 
     on roles(:all) do |server|
 
-      sources = server.roles.map { |role| fetch(:"ubuntu_software_sources_for_#{role}",[])}.flatten + fetch(:ubuntu_software_sources)
+      sources = server.roles.map { |role| fetch(:"ubuntu_software_sources_for_#{role}",[])}.flatten(1) + fetch(:ubuntu_software_sources)
 
       sources.each do |source|
 
