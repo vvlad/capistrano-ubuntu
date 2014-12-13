@@ -12,6 +12,7 @@ default_ubuntu_packages = %w[
   git
   lsof
   ufw
+  ntp
 ]
 
 
@@ -24,8 +25,11 @@ namespace :ubuntu do
 
   task :update_sources do
 
-    on roles(:all) do
-      fetch(:ubuntu_software_sources).each do |source|
+    on roles(:all) do |server|
+
+      sources = server.roles.map { |role| fetch(:"ubuntu_software_sources_for_#{role}",[])}.flatten + fetch(:ubuntu_software_sources)
+
+      sources.each do |source|
 
         if source.is_a? Array
           execute "wget --quiet -O - #{source.last} | sudo apt-key add -"
@@ -41,9 +45,12 @@ namespace :ubuntu do
 
   task :install_packages do
 
-    packages = default_ubuntu_packages + fetch(:ubuntu_packages)
 
-    on roles(:all) do
+
+    on roles(:all) do |server|
+
+      packages = server.roles.map { |role| fetch(:"ubuntu_packages_for_#{role}",[])}.flatten + fetch(:ubuntu_packages) + default_ubuntu_packages
+      packages.uniq!
 
       sudo "apt-get", "-q", "-y", "update"
       sudo "apt-get", "-q", "-y", "--force-yes","install", *packages.flatten
@@ -79,9 +86,9 @@ Unattended-Upgrade::Allowed-Origins {
 end
 
 
-before "deploy:starting", "ubuntu:update_sources"
-after "ubuntu:update_sources", "ubuntu:install_packages"
-after "ubuntu:install_packages", "ubuntu:unattended_upgrades"
 
+before "ubuntu:install_packages", "ubuntu:update_sources"
+after "ubuntu:install_packages", "ubuntu:unattended_upgrades"
+before "deploy:starting", "ubuntu:install_packages"
 
 
